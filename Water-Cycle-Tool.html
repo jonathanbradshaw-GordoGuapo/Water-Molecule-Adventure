@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Water Cycle Reservoir Dice Journey (8 Stations)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111a2e; --muted:#9fb0d0; --text:#e9f0ff;
+      --accent:#6ee7ff; --good:#7dff9a; --warn:#ffd66e; --bad:#ff7d7d;
+      --border:rgba(255,255,255,0.12);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(110,231,255,0.12), transparent 60%),
+                  radial-gradient(1000px 600px at 80% 10%, rgba(125,255,154,0.10), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:20px 18px 10px;
+      max-width:1100px; margin:0 auto;
+    }
+    h1{margin:0 0 6px; font-size:22px; letter-spacing:0.2px}
+    p{margin:0 0 10px; color:var(--muted); line-height:1.35}
+    .wrap{
+      max-width:1100px; margin:0 auto; padding:0 18px 20px;
+      display:grid; grid-template-columns: 1.1fr 0.9fr; gap:14px;
+    }
+    @media (max-width: 900px){ .wrap{grid-template-columns:1fr; } }
+    .panel{
+      background:rgba(17,26,46,0.88);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      backdrop-filter: blur(6px);
+    }
+    .stations{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:10px;
+    }
+    @media (max-width: 600px){ .stations{grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .station{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      min-height:88px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      cursor:pointer;
+      position:relative;
+      transition: transform 0.08s ease, border-color 0.12s ease;
+      user-select:none;
+    }
+    .station:hover{ transform: translateY(-1px); border-color: rgba(110,231,255,0.35); }
+    .station.disabled{
+      opacity:0.45;
+      cursor:not-allowed;
+      transform:none !important;
+      border-color: var(--border) !important;
+    }
+    .station.active{
+      outline: 2px solid rgba(110,231,255,0.8);
+      box-shadow: 0 0 0 4px rgba(110,231,255,0.12);
+    }
+    .station .name{font-weight:700; font-size:13px; margin-bottom:6px}
+    .station .hint{font-size:12px; color:var(--muted)}
+    .badge{
+      position:absolute; top:8px; right:8px;
+      font-size:11px; padding:3px 8px; border-radius:999px;
+      border:1px solid var(--border); color:var(--muted);
+      background:rgba(0,0,0,0.15);
+    }
+    .badge.start{ color: var(--accent); border-color: rgba(110,231,255,0.35); }
+    .badge.you{ color: var(--good); border-color: rgba(125,255,154,0.35); }
+
+    .controls{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      margin-top:10px;
+    }
+    button{
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:650;
+      cursor:pointer;
+      transition: transform 0.08s ease, border-color 0.12s ease;
+    }
+    button:hover{ transform: translateY(-1px); border-color: rgba(110,231,255,0.35); }
+    button:disabled{ opacity:0.45; cursor:not-allowed; transform:none; }
+    .statline{
+      display:grid; grid-template-columns:1fr 1fr; gap:10px;
+      margin-top:10px;
+    }
+    .stat{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      background: rgba(255,255,255,0.04);
+    }
+    .stat .label{font-size:12px; color:var(--muted)}
+    .stat .value{font-size:16px; font-weight:800; margin-top:3px}
+    .result{
+      margin-top:12px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      background: rgba(0,0,0,0.18);
+      min-height:96px;
+    }
+    .result .top{
+      display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+      margin-bottom:6px;
+    }
+    .pill{
+      font-size:12px; padding:4px 10px; border-radius:999px;
+      border:1px solid var(--border);
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+      white-space:nowrap;
+    }
+    .msg{ margin:6px 0 0; color: var(--text); line-height:1.35; }
+    .to{ color: var(--accent); font-weight:800; }
+    .log{
+      margin-top:12px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      background: rgba(255,255,255,0.03);
+      max-height:340px;
+      overflow:auto;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .log ol{ margin:8px 0 0 18px; padding:0; }
+    .log li{ margin:6px 0; color: var(--muted); }
+    .log b{ color: var(--text); }
+    .footer-note{
+      margin-top:10px; font-size:12px; color: var(--muted);
+    }
+    .done{
+      border-color: rgba(125,255,154,0.35) !important;
+      background: rgba(125,255,154,0.07) !important;
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Water Molecule Journey — 8 Reservoir Stations + Dice</h1>
+  <p>
+    You are a water molecule. Start at a random reservoir. Click your current station, roll a die, read what happens,
+    then move to the next reservoir. Your goal: return to your starting reservoir <b>two times</b>.
+  </p>
+</header>
+
+<div class="wrap">
+  <section class="panel">
+    <div class="stations" id="stations"></div>
+
+    <div class="controls">
+      <button id="btnNew">New Student / Reset</button>
+      <button id="btnRoll" disabled>Roll Die (1–6)</button>
+      <span class="pill" id="helpPill">Click your <b>current</b> station first</span>
+    </div>
+
+    <div class="statline">
+      <div class="stat">
+        <div class="label">Starting reservoir</div>
+        <div class="value" id="startName">—</div>
+      </div>
+      <div class="stat">
+        <div class="label">Returns to start</div>
+        <div class="value" id="returns">0 / 2</div>
+      </div>
+    </div>
+
+    <div class="result" id="resultBox">
+      <div class="top">
+        <div class="pill" id="wherePill">Current: —</div>
+        <div class="pill" id="diePill">Die: —</div>
+      </div>
+      <div class="msg" id="msg">
+        Click your current station to activate the roll button.
+      </div>
+    </div>
+
+    <div class="footer-note">
+      Teacher note: Customize outcomes in the <code>STATIONS</code> object inside the HTML.
+    </div>
+  </section>
+
+  <aside class="panel">
+    <h2 style="margin:0 0 6px; font-size:18px;">Journey Log</h2>
+    <p style="margin:0 0 8px; color:var(--muted);">
+      Record each “phase” of your molecule’s path. You can copy/paste this into a notebook if needed.
+    </p>
+    <div class="log" id="log">
+      <div class="pill">Steps</div>
+      <ol id="logList"></ol>
+    </div>
+  </aside>
+</div>
+
+<script>
+/**
+ * 8 reservoir stations. Each has 6 die outcomes:
+ * - text: what happened
+ * - to: next station id (must be one of the keys in this object)
+ *
+ * You can edit these freely to match your curriculum language.
+ */
+const STATIONS = {
+  atmosphere: {
+    name: "Atmosphere (Air)",
+    outcomes: [
+      { to:"cloud", text:"You cool and condense into tiny droplets in a cloud." },
+      { to:"ocean", text:"You fall as precipitation and land in the ocean." },
+      { to:"land", text:"You fall as precipitation and land on the ground (soil)." },
+      { to:"river", text:"You fall as precipitation and join a river/stream." },
+      { to:"glacier", text:"You fall as snow and become part of a glacier/ice cap." },
+      { to:"atmosphere", text:"You stay in the atmosphere, moving with air currents." },
+    ]
+  },
+
+  cloud: {
+    name: "Clouds",
+    outcomes: [
+      { to:"atmosphere", text:"You evaporate back into water vapor." },
+      { to:"ocean", text:"You precipitate and fall into the ocean." },
+      { to:"land", text:"You precipitate and soak into soil." },
+      { to:"lake", text:"You precipitate and land in a lake/pond." },
+      { to:"river", text:"You precipitate and land in a river/stream." },
+      { to:"cloud", text:"You stay suspended in the cloud for a while." },
+    ]
+  },
+
+  ocean: {
+    name: "Ocean",
+    outcomes: [
+      { to:"atmosphere", text:"You evaporate from the ocean surface into the atmosphere." },
+      { to:"cloud", text:"You evaporate and later condense into a cloud." },
+      { to:"ocean", text:"You stay in the ocean, mixing with currents." },
+      { to:"glacier", text:"You move toward colder regions and freeze into sea ice/glacial ice." },
+      { to:"river", text:"You move into an estuary and then into a river mouth." },
+      { to:"lake", text:"You evaporate, precipitate on land, and collect in a lake." },
+    ]
+  },
+
+  land: {
+    name: "Soil / Land Surface",
+    outcomes: [
+      { to:"groundwater", text:"You infiltrate and become groundwater." },
+      { to:"river", text:"You run off into a stream/river." },
+      { to:"atmosphere", text:"You evaporate from the ground into the atmosphere." },
+      { to:"plant", text:"A plant absorbs you through its roots." },
+      { to:"lake", text:"You move downhill and collect in a lake/pond." },
+      { to:"land", text:"You stay in the soil for a while." },
+    ]
+  },
+
+  river: {
+    name: "River / Stream",
+    outcomes: [
+      { to:"ocean", text:"You flow downstream and reach the ocean." },
+      { to:"lake", text:"You flow into a lake/pond." },
+      { to:"atmosphere", text:"You evaporate from the river into the atmosphere." },
+      { to:"groundwater", text:"You seep into the ground and become groundwater." },
+      { to:"plant", text:"A plant along the bank absorbs you." },
+      { to:"river", text:"You keep flowing in the river." },
+    ]
+  },
+
+  lake: {
+    name: "Lake / Pond",
+    outcomes: [
+      { to:"atmosphere", text:"You evaporate from the lake into the atmosphere." },
+      { to:"cloud", text:"You evaporate and later condense into a cloud." },
+      { to:"river", text:"You flow out of the lake and into a river." },
+      { to:"groundwater", text:"You seep into the ground and become groundwater." },
+      { to:"lake", text:"You stay in the lake, mixing around." },
+      { to:"glacier", text:"You freeze as ice on the lake (seasonal ice)." },
+    ]
+  },
+
+  groundwater: {
+    name: "Groundwater (Aquifer)",
+    outcomes: [
+      { to:"river", text:"You seep out as a spring and join a river." },
+      { to:"ocean", text:"You slowly flow underground and discharge into the ocean." },
+      { to:"plant", text:"Roots pull you up into a plant." },
+      { to:"land", text:"You move upward (capillary action) back to soil." },
+      { to:"groundwater", text:"You stay underground for a long time." },
+      { to:"lake", text:"You discharge into a lake/pond." },
+    ]
+  },
+
+  glacier: {
+    name: "Glacier / Ice",
+    outcomes: [
+      { to:"river", text:"You melt and flow into a river." },
+      { to:"ocean", text:"You melt and eventually reach the ocean." },
+      { to:"atmosphere", text:"You sublimate (ice → vapor) into the atmosphere." },
+      { to:"cloud", text:"You sublimate and later condense into clouds." },
+      { to:"glacier", text:"You stay frozen in the glacier for years." },
+      { to:"land", text:"You melt and soak into soil/land." },
+    ]
+  },
+
+  plant: {
+    name: "Plants (Biosphere)",
+    outcomes: [
+      { to:"atmosphere", text:"You leave the plant by transpiration into the atmosphere." },
+      { to:"cloud", text:"You transpire and later condense into clouds." },
+      { to:"land", text:"You drip from leaves to the soil (throughfall)." },
+      { to:"river", text:"You move to soil and then run off into a river." },
+      { to:"plant", text:"You stay in the plant for a while." },
+      { to:"groundwater", text:"You move to soil and infiltrate into groundwater." },
+    ]
+  }
+};
+
+// --- App State ---
+let startStationId = null;
+let currentStationId = null;
+let returnsToStart = 0;
+let stepCount = 0;
+let selectedStationId = null;
+let finished = false;
+
+// --- DOM ---
+const elStations = document.getElementById("stations");
+const elStartName = document.getElementById("startName");
+const elReturns = document.getElementById("returns");
+const elBtnNew = document.getElementById("btnNew");
+const elBtnRoll = document.getElementById("btnRoll");
+const elHelpPill = document.getElementById("helpPill");
+const elWherePill = document.getElementById("wherePill");
+const elDiePill = document.getElementById("diePill");
+const elMsg = document.getElementById("msg");
+const elResultBox = document.getElementById("resultBox");
+const elLogList = document.getElementById("logList");
+
+// --- Helpers ---
+function randInt(min, maxInclusive){
+  return Math.floor(Math.random() * (maxInclusive - min + 1)) + min;
+}
+function stationName(id){ return STATIONS[id].name; }
+
+function setMessage(html, tone="neutral"){
+  elMsg.innerHTML = html;
+  elResultBox.classList.remove("done");
+  if (tone === "done") elResultBox.classList.add("done");
+}
+
+function logStep(text){
+  const li = document.createElement("li");
+  li.innerHTML = text;
+  elLogList.appendChild(li);
+  // scroll log to bottom
+  elLogList.parentElement.scrollTop = elLogList.parentElement.scrollHeight;
+}
+
+function clearLog(){
+  elLogList.innerHTML = "";
+}
+
+function renderStations(){
+  elStations.innerHTML = "";
+  for (const [id, data] of Object.entries(STATIONS)){
+    const div = document.createElement("div");
+    div.className = "station";
+    div.dataset.id = id;
+
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    badge.textContent = "Station";
+
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = data.name;
+
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "Click to select";
+
+    div.appendChild(badge);
+    div.appendChild(name);
+    div.appendChild(hint);
+
+    div.addEventListener("click", () => onStationClick(id));
+    elStations.appendChild(div);
+  }
+  updateStationUI();
+}
+
+function updateStationUI(){
+  const cards = Array.from(document.querySelectorAll(".station"));
+  cards.forEach(card => {
+    const id = card.dataset.id;
+    card.classList.remove("active","disabled");
+    const badge = card.querySelector(".badge");
+    badge.classList.remove("start","you");
+    badge.textContent = "Station";
+
+    // Mark start
+    if (id === startStationId){
+      badge.textContent = "Start";
+      badge.classList.add("start");
+    }
+
+    // Mark current
+    if (id === currentStationId){
+      badge.textContent = (id === startStationId) ? "Start + You" : "You";
+      badge.classList.add("you");
+    }
+
+    // Only allow clicking current station (keeps gameplay clean)
+    const isClickable = (!finished && id === currentStationId);
+    if (!isClickable) card.classList.add("disabled");
+    if (selectedStationId === id && isClickable) card.classList.add("active");
+  });
+
+  elWherePill.textContent = currentStationId ? `Current: ${stationName(currentStationId)}` : "Current: —";
+  elStartName.textContent = startStationId ? stationName(startStationId) : "—";
+  elReturns.textContent = `${returnsToStart} / 2`;
+
+  if (finished){
+    elBtnRoll.disabled = true;
+    elHelpPill.innerHTML = "Finished ✅ Reset for a new student.";
+  } else {
+    elBtnRoll.disabled = (selectedStationId !== currentStationId);
+    elHelpPill.innerHTML = (selectedStationId === currentStationId)
+      ? "Now roll the die"
+      : "Click your <b>current</b> station first";
+  }
+}
+
+function newGame(){
+  const keys = Object.keys(STATIONS);
+  startStationId = keys[randInt(0, keys.length - 1)];
+  currentStationId = startStationId;
+  selectedStationId = null;
+  returnsToStart = 0;
+  stepCount = 0;
+  finished = false;
+
+  clearLog();
+  elDiePill.textContent = "Die: —";
+  setMessage(`You started at <b>${stationName(startStationId)}</b>. Click that station, then roll the die.`);
+  logStep(`<b>Start:</b> ${stationName(startStationId)}`);
+
+  updateStationUI();
+}
+
+function onStationClick(id){
+  if (finished) return;
+
+  // Only current station is clickable per UI rules
+  if (id !== currentStationId) return;
+
+  selectedStationId = id;
+  updateStationUI();
+}
+
+function rollDie(){
+  if (finished) return;
+  if (selectedStationId !== currentStationId) return;
+
+  const die = randInt(1, 6);
+  elDiePill.textContent = `Die: ${die}`;
+
+  const station = STATIONS[currentStationId];
+  const outcome = station.outcomes[die - 1];
+
+  const fromName = station.name;
+  const toName = stationName(outcome.to);
+
+  stepCount += 1;
+
+  // Move
+  currentStationId = outcome.to;
+  selectedStationId = null;
+
+  // Check returns to start (count ONLY when arriving back at start, not at time 0)
+  if (currentStationId === startStationId){
+    returnsToStart += 1;
+  }
+
+  // Log + message
+  const returnNote = (currentStationId === startStationId)
+    ? ` <span style="color: var(--good); font-weight:800;">(Returned to start: ${returnsToStart}/2)</span>`
+    : "";
+
+  setMessage(
+    `<b>From:</b> ${fromName}<br/>
+     <b>What happened:</b> ${outcome.text}<br/>
+     <b>Next:</b> <span class="to">${toName}</span>${returnNote}`
+  );
+
+  logStep(
+    `<b>Step ${stepCount}:</b> ${fromName} → <b>${toName}</b> (die ${die}) — ${outcome.text}${(currentStationId === startStationId ? " ✅ return" : "")}`
+  );
+
+  // Finish condition: returned to start twice
+  if (returnsToStart >= 2){
+    finished = true;
+    setMessage(
+      `🎉 <b>Complete!</b> You returned to your starting reservoir <b>two times</b>.<br/>
+       You can reset for the next student.`,
+      "done"
+    );
+    logStep(`<b>Finished:</b> Returned to start 2 times ✅`);
+  }
+
+  updateStationUI();
+}
+
+// Init
+renderStations();
+newGame();
+
+elBtnNew.addEventListener("click", newGame);
+elBtnRoll.addEventListener("click", rollDie);
+</script>
+</body>
+</html>
